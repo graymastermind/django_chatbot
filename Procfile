@@ -1,1 +1,1 @@
-web: gunicorn app:veremuchatbot
+web: gunicorn veremuchatbot:app
