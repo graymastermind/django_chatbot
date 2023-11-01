@@ -1,0 +1,9 @@
+# render.yaml
+
+version: 1
+services:
+  - name: web
+    buildCommand: python manage.py collectstatic --noinput && gunicorn veremuchatbot.wsgi:application
+    env:
+      - key: DJANGO_SETTINGS_MODULE
+        value: veremuchatbot.settings
