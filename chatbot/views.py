@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.shortcuts import render
 from django.views.decorators.csrf import csrf_exempt
 from twilio.twiml.messaging_response import MessagingResponse
-from .models import User, Notification, Assignment, AssignmentResult, ExamDate, Question
+from .models import User, Notification, Assignment, AssignmentResult, ExamDate, Question, Institution
 
 
 @csrf_exempt
@@ -36,17 +36,19 @@ def reply_to_sms(request):
             reset_last_input(request)
             twilio_response.message("Welcome! Ruwa Vocational Training Centre:\n0. Register\n1. Ask a question\n2. View Notifications\n3. Update Profile\n4. Submit Assignment\n5. Assignment Results\n6. Financial Account\n7. Examination Dates\n8. Exit")
         elif incoming_message == '9':
-            user = User.objects.get(phone_number=sender_phone_number)
-            twilio_response.message(user)
-            twilio_response.message('Is user', user.is_admin)
-            if user.is_admin:
-                # Handle option 9 - View Users
-                users = User.objects.all()
-                user_list = "\n".join(
-                    [f"ID: {user.id}, Username: {user.username}, Phone Number: {user.phone_number}" for user in users])
-                twilio_response.message(f"Users:\n{user_list}")
-            else:
-                twilio_response.message("Access denied. You must be an admin to access this option.")
+            try:
+                user = User.objects.get(phone_number=sender_phone_number)
+                if user.is_admin:
+                    # Handle option 9 - View Users
+                    users = User.objects.all()
+                    user_list = "\n".join(
+                        [f"ID: {user.id}, Username: {user.username}, Phone Number: {user.phone_number}" for user in
+                         users])
+                    twilio_response.message(f"Users:\n{user_list}")
+                else:
+                    twilio_response.message("Access denied. You must be an admin to access this option.")
+            except User.DoesNotExist:
+                twilio_response.message("User does not exist.")
             reset_last_input(request)
         elif (last_input == '' or last_input == 'hi') and incoming_message == '1':
             request.session['last_input'] = '1'
@@ -59,14 +61,19 @@ def reply_to_sms(request):
             twilio_response.message("Question submitted successfully!")
             reset_last_input(request)
         elif incoming_message == '10':
-            user = User.objects.get(phone_number=sender_phone_number)
-            if user.is_admin:
-                questions = Question.objects.all()
-                question_list = "\n".join([f"ID: {question.id}, Phone Number: {question.phone_number}, Content: {question.content}" for question in questions])
-                twilio_response.message(f"All Questions:\n{question_list}")
-                reset_last_input(request)
-            else:
-                twilio_response.message("Access denied. You must be an admin to access this option.")
+            try:
+                user = User.objects.get(phone_number=sender_phone_number)
+                if user.is_admin:
+                    questions = Question.objects.all()
+                    question_list = "\n".join(
+                        [f"ID: {question.id}, Phone Number: {question.phone_number}, Content: {question.content}" for
+                         question in questions])
+                    twilio_response.message(f"All Questions:\n{question_list}")
+                    reset_last_input(request)
+                else:
+                    twilio_response.message("Access denied. You must be an admin to access this option.")
+            except User.DoesNotExist:
+                twilio_response.message("User does not exist.")
             reset_last_input(request)
         elif (last_input == '' or last_input == 'hi') and incoming_message == '2':
             request.session['last_input'] = '2'
@@ -81,13 +88,16 @@ def reply_to_sms(request):
             reset_last_input(request)
             twilio_response.message(message)
         elif (last_input == '' or last_input == 'hi') and incoming_message == '11':
-            user = User.objects.get(phone_number=sender_phone_number)
-            if user.is_admin:
-                request.session['last_input'] = '11'
-                twilio_response.message("You chose option 11 - Create Notification")
-                twilio_response.message("Please enter the notification content:")
-            else:
-                twilio_response.message("Access denied. You must be an admin to access this option.")
+            try:
+                user = User.objects.get(phone_number=sender_phone_number)
+                if user.is_admin:
+                    request.session['last_input'] = '11'
+                    twilio_response.message("You chose option 11 - Create Notification")
+                    twilio_response.message("Please enter the notification content:")
+                else:
+                    twilio_response.message("Access denied. You must be an admin to access this option.")
+            except User.DoesNotExist:
+                twilio_response.message("User does not exist.")
             reset_last_input(request)
         elif last_input == '11':
             notification_content = incoming_message
@@ -139,10 +149,27 @@ def reply_to_sms(request):
             twilio_response.message("Examination dates:\n[Placeholder for exam dates]")
             reset_last_input(request)
         elif incoming_message.lower() == "research":
-            # Handle "research" command to ask a question
-            request.session['last_input'] = '1'
-            twilio_response.message("You chose option 1 - Ask a question")
-            twilio_response.message("Please enter your question:")
+            request.session['last_input'] = 'research'
+            twilio_response.message("You chose the research option. Please enter your question:")
+
+        elif last_input == 'research':
+            question_content = incoming_message
+
+            # Query the Institution model to check for relevant information
+            matching_institutions = Institution.objects.filter(
+                description__icontains=question_content
+            )
+
+            if matching_institutions:
+                feedback = "Here is some information related to your query:\n"
+                for institution in matching_institutions:
+                    # feedback += f"Institution: {institution.name}\nLocation: {institution.location}\nDescription: {institution.description}\nContact Email: {institution.contact_email}\nContact Phone: {institution.contact_phone}\n\n"
+                    feedback += f"\n {institution.description}"
+                twilio_response.message(feedback)
+            else:
+                twilio_response.message("Sorry, no relevant institution information found.")
+
+            reset_last_input(request)
         elif incoming_message == '8':
             # Handle option 8 - Exit
             reset_last_input(request)

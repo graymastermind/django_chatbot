@@ -6,7 +6,7 @@ from django.db import models
 
 class User(models.Model):
     username = models.CharField(max_length=255)
-    phone_number = models.CharField(max_length=20, unique=True)
+    phone_number = models.TextField(max_length=50, unique=True)
     user_id = models.CharField(max_length=20, unique=True)
     is_admin = models.BooleanField(default=False)  # New field for admin status
 
@@ -36,3 +36,10 @@ class ExamDate(models.Model):
 class AccountInformation(models.Model):
     phone_number = models.CharField(max_length=20, unique=True)
     balance = models.DecimalField(max_digits=10, decimal_places=2)
+
+class Institution(models.Model):
+    name = models.CharField(max_length=255)
+    location = models.CharField(max_length=255)
+    description = models.TextField()
+    contact_email = models.EmailField()
+    contact_phone = models.CharField(max_length=20)
