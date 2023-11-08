@@ -37,6 +37,8 @@ def reply_to_sms(request):
             twilio_response.message("Welcome! Ruwa Vocational Training Centre:\n0. Register\n1. Ask a question\n2. View Notifications\n3. Update Profile\n4. Submit Assignment\n5. Assignment Results\n6. Financial Account\n7. Examination Dates\n8. Exit")
         elif incoming_message == '9':
             user = User.objects.get(phone_number=sender_phone_number)
+            twilio_response.message(user)
+            twilio_response.message('Is user', user.is_admin)
             if user.is_admin:
                 # Handle option 9 - View Users
                 users = User.objects.all()
