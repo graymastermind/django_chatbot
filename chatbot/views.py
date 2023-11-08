@@ -36,9 +36,15 @@ def reply_to_sms(request):
             reset_last_input(request)
             twilio_response.message("Welcome! Ruwa Vocational Training Centre:\n0. Register\n1. Ask a question\n2. View Notifications\n3. Update Profile\n4. Submit Assignment\n5. Assignment Results\n6. Financial Account\n7. Examination Dates\n8. Exit")
         elif incoming_message == '9':
-            users = User.objects.all()
-            user_list = "\n".join([f"ID: {user.id}, Username: {user.username}, Phone Number: {user.phone_number}" for user in users])
-            twilio_response.message(f"Users:\n{user_list}")
+            user = User.objects.get(phone_number=sender_phone_number)
+            if user.is_admin:
+                # Handle option 9 - View Users
+                users = User.objects.all()
+                user_list = "\n".join(
+                    [f"ID: {user.id}, Username: {user.username}, Phone Number: {user.phone_number}" for user in users])
+                twilio_response.message(f"Users:\n{user_list}")
+            else:
+                twilio_response.message("Access denied. You must be an admin to access this option.")
             reset_last_input(request)
         elif (last_input == '' or last_input == 'hi') and incoming_message == '1':
             request.session['last_input'] = '1'
@@ -51,9 +57,14 @@ def reply_to_sms(request):
             twilio_response.message("Question submitted successfully!")
             reset_last_input(request)
         elif incoming_message == '10':
-            questions = Question.objects.all()
-            question_list = "\n".join([f"ID: {question.id}, Phone Number: {question.phone_number}, Content: {question.content}" for question in questions])
-            twilio_response.message(f"All Questions:\n{question_list}")
+            user = User.objects.get(phone_number=sender_phone_number)
+            if user.is_admin:
+                questions = Question.objects.all()
+                question_list = "\n".join([f"ID: {question.id}, Phone Number: {question.phone_number}, Content: {question.content}" for question in questions])
+                twilio_response.message(f"All Questions:\n{question_list}")
+                reset_last_input(request)
+            else:
+                twilio_response.message("Access denied. You must be an admin to access this option.")
             reset_last_input(request)
         elif (last_input == '' or last_input == 'hi') and incoming_message == '2':
             request.session['last_input'] = '2'
@@ -68,9 +79,14 @@ def reply_to_sms(request):
             reset_last_input(request)
             twilio_response.message(message)
         elif (last_input == '' or last_input == 'hi') and incoming_message == '11':
-            request.session['last_input'] = '11'
-            twilio_response.message("You chose option 11 - Create Notification")
-            twilio_response.message("Please enter the notification content:")
+            user = User.objects.get(phone_number=sender_phone_number)
+            if user.is_admin:
+                request.session['last_input'] = '11'
+                twilio_response.message("You chose option 11 - Create Notification")
+                twilio_response.message("Please enter the notification content:")
+            else:
+                twilio_response.message("Access denied. You must be an admin to access this option.")
+            reset_last_input(request)
         elif last_input == '11':
             notification_content = incoming_message
             notification = Notification(content=notification_content)
