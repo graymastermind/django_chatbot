@@ -24,13 +24,15 @@ class Question(models.Model):
     def __str__(self):
         return self.content
 
+def get_default_file():
+    return 'default/file/path.txt'
 
 class Assignment(models.Model):
     subject = models.CharField(max_length=255)
-    file_storage = models.CharField(max_length=255)
+    file = models.FileField(upload_to='uploads/', default=get_default_file)
 
     def __str__(self):
-        return self.subject
+        return f"{self.subject} - {self.file.name}"
 
 
 class AssignmentResult(models.Model):

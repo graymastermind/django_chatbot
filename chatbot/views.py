@@ -23,9 +23,9 @@ def reply_to_sms(request):
             try:
                 user = User.objects.get(phone_number=sender_phone_number)
                 if user.is_admin:
-                    twilio_response.message("Welcome! Ruwa Vocational Training Centre:\n0. Register\n1. Ask a question\n2. View Notifications\n3. Update Profile\n4. Submit Assignment\n5. Assignment Results\n6. Financial Account\n7. Examination Dates\n(research). Use command research to ask any question\n8. Exit\n9. View Users\n10. View Questions\n11. Create Notications (Announcement)\n12. Add Examination Date")
+                    twilio_response.message("Welcome! Ruwa Vocational Training Centre:\n0. Register\n1. Ask a question\n2. View Notifications\n3. Update Profile\n4. Submit Assignment\n5. Assignment Results\n6. Financial Account\n7. Examination Dates\n(research). Use command research to ask any question\n8. Exit\n9. View Users\n10. View Questions\n11. Create Notications (Announcement)\n12. Add Examination Date\n13. List Assignments\n14. Download Assignment")
                 else:
-                    twilio_response.message("Welcome! Ruwa Vocational Training Centre:\n0. Register\n1. Ask a question\n2. View Notifications\n3. Update Profile\n4. Submit Assignment\n5. Assignment Results\n6. Financial Account\n7. Examination Dates\n8. Exit")
+                    twilio_response.message("Welcome! Ruwa Vocational Training Centre:\n0. Register\n1. Ask a question\n2. View Notifications\n3. Update Profile\n4. Submit Assignment\n5. Assignment Results\n6. Financial Account\n7. Examination Dates\n13. List Assignments\n14. Download Assignment\n8. Exit")
             except User.DoesNotExist:
                 twilio_response.message("Welcome! Ruwa Vocational Training Centre:\n0. Register\n1. Ask a question\n2. View Notifications\n3. Update Profile\n4. Submit Assignment\n5. Assignment Results\n6. Financial Account\n7. Examination Dates\n(research). Use command research to ask any question\n8. Exit")
         elif incoming_message.lower() == "reset":
@@ -173,6 +173,47 @@ def reply_to_sms(request):
         elif incoming_message.lower() == "research":
             request.session['last_input'] = 'research'
             twilio_response.message("You chose the research option. Please enter your question:")
+        elif incoming_message == '13':
+            try:
+                user = User.objects.get(phone_number=sender_phone_number)
+                if user.is_admin:
+                    # Handle option 13 - List Assignments
+                    assignments = Assignment.objects.all()
+                    assignment_list = "\n".join(
+                        [f"ID: {assignment.id}, Subject: {assignment.subject}, File: {assignment.file}" for
+                         assignment in assignments])
+                    twilio_response.message(f"All Assignments:\n{assignment_list}")
+                else:
+                    twilio_response.message("Access denied. You must be an admin to access this option.")
+            except User.DoesNotExist:
+                twilio_response.message("User does not exist.")
+            reset_last_input(request)
+        elif incoming_message == '14':
+            try:
+                user = User.objects.get(phone_number=sender_phone_number)
+                if user.is_admin:
+                    twilio_response.message("Access denied. Students can download assignments.")
+                else:
+                    # Handle option 14 - Download Assignment
+                    # Prompt the user to enter the assignment ID to download
+                    request.session['last_input'] = '14'
+                    twilio_response.message("You chose option 14 - Download Assignment")
+                    twilio_response.message("Please enter the assignment ID to download:")
+            except User.DoesNotExist:
+                twilio_response.message("User does not exist.")
+            
+        elif last_input == '14':
+            # Retrieve the assignment based on the input ID
+            assignment_id = incoming_message
+            try:
+                assignment = Assignment.objects.get(id=assignment_id)
+                # Generate the download link for the assignment
+                download_link = assignment.file.url
+                twilio_response.message(f"Download Assignment: {download_link}")
+            except Assignment.DoesNotExist:
+                twilio_response.message("Assignment does not exist.")
+            reset_last_input(request)
+
 
         elif last_input == 'research':
             question_content = incoming_message
@@ -320,3 +361,14 @@ def create_examination_date(request):
             reset_last_input(request)
             return HttpResponse(str(twilio_response))
 
+
+def download_assignment(request, assignment_id):
+    try:
+        assignment = Assignment.objects.get(id=assignment_id)
+        file_path = assignment.file.path
+        with open(file_path, 'rb') as file:
+            response = HttpResponse(file.read())
+            response['Content-Disposition'] = 'attachment; filename=' + assignment.file.name
+            return response
+    except Assignment.DoesNotExist:
+        raise Http404("Assignment does not exist.")
