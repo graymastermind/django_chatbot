@@ -28,11 +28,15 @@ def reply_to_sms(request):
             twilio_response.message("You chose option 0 - Register")
             twilio_response.message("Please enter your username:")
         elif last_input == '0':
-            username = incoming_message
-            user_id = generate_user_id()
-            user = User(username=username, phone_number=sender_phone_number, user_id=user_id)
-            user.save()
-            twilio_response.message("Registration successful! Your user ID is: {}".format(user_id))
+            existing_user = User.objects.filter(phone_number=sender_phone_number).first()
+            if existing_user:
+                twilio_response.message("Phone number already registered! Please log in instead.")
+            else:
+                username = incoming_message
+                user_id = generate_user_id()
+                user = User(username=username, phone_number=sender_phone_number, user_id=user_id)
+                user.save()
+                twilio_response.message("Registration successful! Your user ID is: {}".format(user_id))
             reset_last_input(request)
             twilio_response.message("Welcome! Ruwa Vocational Training Centre:\n0. Register\n1. Ask a question\n2. View Notifications\n3. Update Profile\n4. Submit Assignment\n5. Assignment Results\n6. Financial Account\n7. Examination Dates\n8. Exit")
         elif incoming_message == '9':
@@ -96,15 +100,17 @@ def reply_to_sms(request):
                     twilio_response.message("Please enter the notification content:")
                 else:
                     twilio_response.message("Access denied. You must be an admin to access this option.")
+                    reset_last_input(request)
             except User.DoesNotExist:
                 twilio_response.message("User does not exist.")
-            reset_last_input(request)
+                reset_last_input(request)
         elif last_input == '11':
             notification_content = incoming_message
             notification = Notification(content=notification_content)
             notification.save()
             twilio_response.message("Notification saved successfully.")
             reset_last_input(request)
+
         elif incoming_message == '3':
             # Handle option 3 - Update Profile
             request.session['last_input'] = '3'
